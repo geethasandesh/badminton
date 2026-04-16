@@ -1,18 +1,18 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { useMatchStore } from '../store/useMatchStore';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Activity, ArrowLeftRight } from 'lucide-react';
+import { ChevronLeft, ArrowLeftRight } from 'lucide-react';
 
 export default function ViewerScoreScreen() {
   const navigate = useNavigate();
   const { matchId } = useParams();
-  const { 
-    team1, team2, currentSet, matchType,
+  const {
+    team1, team2, currentSet, matchType, pointsToWin,
     servingTeam,
     getServingDetails, subscribeToMatch, status,
-    team1Cards, team2Cards, challengesRemaining, changeOfEndsDue, suspendReason
+    officiatingMode, team1Cards, team2Cards, challengesRemaining, changeOfEndsDue, suspendReason,
   } = useMatchStore();
 
   useEffect(() => {
@@ -23,20 +23,67 @@ export default function ViewerScoreScreen() {
   }, [matchId, subscribeToMatch]);
 
   const servingDetails = getServingDetails();
-  const getAvatarLetter = (name) => name ? name.substring(0, 1).toUpperCase() : '?';
-
+  const getAvatarLetter = (name) => (name ? name.substring(0, 1).toUpperCase() : '?');
   const t1Name = matchType === 'singles' ? (team1?.players?.[0] || 'Player 1') : (team1?.name || 'Team 1');
   const t2Name = matchType === 'singles' ? (team2?.players?.[0] || 'Player 2') : (team2?.name || 'Team 2');
 
   const c1 = team1Cards || { yellow: 0, red: 0 };
   const c2 = team2Cards || { yellow: 0, red: 0 };
   const ch = challengesRemaining || { team1: 2, team2: 2 };
+  const serviceLaneXClass = servingDetails.serveSidePos === 1 ? 'left-[68%]' : 'left-[32%]';
+  const receiveLaneXClass = servingDetails.serveSidePos === 1 ? 'left-[32%]' : 'left-[68%]';
+  const [liveToast, setLiveToast] = useState('');
+  const [updates, setUpdates] = useState([]);
+  const prevStateRef = useRef(null);
 
   const pageUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), []);
   const pageTitle = `${t1Name} vs ${t2Name} · Live | Baddie Score`;
+  const totalPoints = (team1?.score || 0) + (team2?.score || 0);
+  const team1WinRatio = totalPoints > 0 ? Math.round(((team1?.score || 0) / totalPoints) * 100) : 50;
+  const team2WinRatio = totalPoints > 0 ? Math.round(((team2?.score || 0) / totalPoints) * 100) : 50;
+  const targetPoints = pointsToWin || 21;
+  const t1Progress = Math.min(100, Math.round(((team1?.score || 0) / targetPoints) * 100));
+  const t2Progress = Math.min(100, Math.round(((team2?.score || 0) / targetPoints) * 100));
+  const lead = (team1?.score || 0) - (team2?.score || 0);
+  const projectedWinner = lead === 0 ? 'Balanced' : lead > 0 ? t1Name : t2Name;
+
+  const addUpdate = (message) => {
+    const item = { id: `${Date.now()}-${Math.random()}`, message };
+    setUpdates((prev) => [item, ...prev].slice(0, 4));
+    setLiveToast(message);
+  };
+
+  useEffect(() => {
+    const prev = prevStateRef.current;
+    if (!prev) {
+      prevStateRef.current = {
+        t1Score: team1?.score || 0,
+        t2Score: team2?.score || 0,
+        servingTeam,
+      };
+      return;
+    }
+
+    const t1Score = team1?.score || 0;
+    const t2Score = team2?.score || 0;
+
+    if (t1Score > prev.t1Score) addUpdate(`${t1Name.toUpperCase()} gained a point`);
+    if (t2Score > prev.t2Score) addUpdate(`${t2Name.toUpperCase()} gained a point`);
+    if (servingTeam !== prev.servingTeam) {
+      addUpdate(`${(servingTeam === 1 ? t1Name : t2Name).toUpperCase()} is serving`);
+    }
+
+    prevStateRef.current = { t1Score, t2Score, servingTeam };
+  }, [team1?.score, team2?.score, servingTeam, t1Name, t2Name]);
+
+  useEffect(() => {
+    if (!liveToast) return;
+    const t = setTimeout(() => setLiveToast(''), 2400);
+    return () => clearTimeout(t);
+  }, [liveToast]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0b1120] text-white font-sans pb-32 max-w-[440px] mx-auto w-full">
+    <div className="flex flex-col min-h-screen bg-[#0b1120] text-white font-sans pb-4 max-w-[440px] mx-auto w-full">
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={`Live score: ${t1Name} vs ${t2Name}`} />
@@ -47,194 +94,177 @@ export default function ViewerScoreScreen() {
       </Helmet>
 
       {changeOfEndsDue && status === 'live' && (
-        <div className="mx-6 mt-4 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center gap-3">
-          <ArrowLeftRight className="text-amber-400 shrink-0" size={22} />
-          <p className="text-[11px] font-bold text-amber-200/90 leading-snug">
-            Change of ends — players should switch sides before the next rally.
-          </p>
+        <div className="mx-4 mt-2 p-2 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center gap-2">
+          <ArrowLeftRight className="text-amber-400 shrink-0" size={16} />
+          <p className="text-[10px] font-bold text-amber-200/90">Change of ends before next rally.</p>
         </div>
       )}
-      
-      {/* Top Header */}
-      <div className="flex justify-between items-start p-6 pb-2">
-        <div>
-          <button onClick={() => navigate('/')} className="mb-4 text-slate-400 hover:text-white transition-colors flex items-center gap-1">
-             <ChevronLeft size={20} /> Back to Live Feed
+
+      <div className="px-4 pt-2 pb-1 flex-1 flex flex-col min-h-0">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={() => navigate('/')} className="text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[10px] font-bold uppercase">
+            <ChevronLeft size={14} /> Back
           </button>
-          <h1 className="text-rose-500 font-bold uppercase tracking-widest text-sm flex items-center gap-2">
-             <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-             LIVE MATCH {status === 'suspended' && '- PAUSED'}
-             {suspendReason && status === 'suspended' && (
-               <span className="text-amber-400 text-[10px] normal-case">({suspendReason})</span>
-             )}
+          <h1 className="text-rose-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+            LIVE {status === 'suspended' ? 'PAUSED' : 'MATCH'}
           </h1>
+          <span className="text-slate-500 text-[9px] font-bold uppercase">Set {currentSet}</span>
         </div>
-        <div className="text-right">
-          <p className="text-[#84cc16] font-bold text-xs tracking-wider uppercase">Real-time Score</p>
-          <p className="text-slate-400 text-xs font-medium mt-1 uppercase">BWF System</p>
-        </div>
-      </div>
 
-      {/* Players Profile Section */}
-      <div className="flex flex-col items-center mt-6 px-6 relative">
-         
-         {/* Team 2 Profile */}
-         <div className="flex flex-col items-center z-10">
-            <div className={`w-28 h-28 rounded-full flex items-center justify-center text-4xl font-bold border-4 shadow-2xl ${servingTeam === 2 ? 'border-[#e0f146] shadow-[#e0f146]/20' : 'border-slate-700 bg-slate-800'}`}>
-              {servingTeam === 2 ? (
-                <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#e0f146] to-lime-300 text-slate-900 flex items-center justify-center">
-                  {getAvatarLetter(t2Name)}
-                </div>
-              ) : (
-                <span className="text-slate-500">{getAvatarLetter(t2Name)}</span>
-              )}
-            </div>
-            <h2 className="mt-4 text-3xl font-black italic tracking-wider uppercase drop-shadow-md text-center max-w-[280px] break-words leading-tight">{t2Name}</h2>
-            <p className="text-[#e0f146] font-bold tracking-widest text-sm mt-1 uppercase">{matchType === 'doubles' ? 'Away Team' : 'Away Side'}</p>
-            
-            {servingTeam === 2 && (
-              <div className="mt-4 px-4 py-1.5 bg-[#e0f146] text-slate-900 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#e0f146]/20">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                CURRENTLY SERVING
+        <div className="space-y-2">
+          <div className="p-2 bg-slate-800/25 border border-slate-700/40 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-xs font-black uppercase ${servingTeam === 1 ? 'text-[#e0f146]' : 'text-white'}`}>{t1Name}</p>
+                <p className="text-[8px] text-slate-500 uppercase">Sets {team1?.sets ?? 0}</p>
               </div>
-            )}
-         </div>
-
-         {/* VS Indicator */}
-         <div className="my-8 relative flex items-center justify-center w-full">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-700/50"></div></div>
-            <div className="relative z-10 flex flex-col items-center">
-               <span className="text-6xl font-black text-slate-800/80 italic -mb-6 leading-none select-none">VS</span>
-               <div className="px-6 py-2 bg-[#e0f146] text-slate-900 font-black italic rounded-full text-lg z-10 border-4 border-[#0b1120]">
-                  GAME {currentSet}
-               </div>
+              <Motion.span
+                key={team1.score}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className={`text-4xl font-black tabular-nums ${servingTeam === 1 ? 'text-[#e0f146]' : 'text-slate-300'}`}
+              >
+                {team1.score}
+              </Motion.span>
             </div>
-         </div>
+          </div>
 
-         {/* Team 1 Profile */}
-         <div className="flex flex-col items-center z-10">
-            <div className={`w-28 h-28 rounded-full flex items-center justify-center text-4xl font-bold border-4 shadow-2xl transition-all ${servingTeam === 1 ? 'border-[#e0f146] shadow-[#e0f146]/20' : 'border-slate-700 bg-slate-800'}`}>
-              {servingTeam === 1 ? (
-                <div className="w-full h-full rounded-full bg-gradient-to-tr from-[#e0f146] to-lime-300 text-slate-900 flex items-center justify-center">
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Court Orientation</span>
+              <span className="text-[#e0f146] font-bold uppercase tracking-wider text-[9px] text-right flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#e0f146]"></span>
+                {(servingDetails?.serverName || 'Player').toUpperCase()} SERVING
+              </span>
+            </div>
+            <div className="w-[192px] h-[300px] mx-auto bg-[#0b1120] border border-slate-700 rounded-lg relative shadow-xl p-0.5 box-border overflow-hidden">
+              <div className="absolute inset-y-0 left-1/2 w-[1px] bg-slate-600/80 -translate-x-1/2"></div>
+              <div className="absolute inset-x-0 top-1/2 h-[2px] bg-[#e0f146]/60 shadow-[0_0_8px_#e0f146] -translate-y-1/2"></div>
+              <div className="absolute inset-x-[10%] top-[34%] h-[1px] bg-slate-600/80"></div>
+              <div className="absolute inset-x-[10%] top-[66%] h-[1px] bg-slate-600/80"></div>
+              <div className="absolute inset-y-[2%] left-[10%] w-[1px] bg-slate-700/70"></div>
+              <div className="absolute inset-y-[2%] left-[90%] w-[1px] bg-slate-700/70 -translate-x-full"></div>
+
+              <div className={`absolute ${servingTeam === 1 ? serviceLaneXClass : receiveLaneXClass} top-[20%] -translate-x-1/2 -translate-y-1/2`}>
+                <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[9px] font-bold ${servingTeam === 1 ? 'border-[#e0f146] text-[#e0f146] bg-[#e0f146]/5' : 'border-slate-500 text-slate-500'}`}>
                   {getAvatarLetter(t1Name)}
                 </div>
-              ) : (
-                <span className="text-slate-500">{getAvatarLetter(t1Name)}</span>
-              )}
-            </div>
-            <h2 className="mt-4 text-3xl font-black italic tracking-wider uppercase drop-shadow-md text-center max-w-[280px] break-words leading-tight">{t1Name}</h2>
-            <p className="text-slate-400 font-bold tracking-widest text-sm mt-1 uppercase">{matchType === 'doubles' ? 'Home Team' : 'Home Side'}</p>
-            
-            {servingTeam === 1 && (
-              <div className="mt-4 px-4 py-1.5 bg-[#e0f146] text-slate-900 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#e0f146]/20">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                CURRENTLY SERVING
               </div>
-            )}
-         </div>
-
-      </div>
-
-      <div className="px-6 mt-6 grid grid-cols-2 gap-3 text-center">
-        <div className="p-3 rounded-2xl bg-slate-800/50 border border-slate-700/50">
-          <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Team 1</p>
-          <p className="text-[10px] font-bold text-amber-400">Y {c1.yellow} · R {c1.red}</p>
-          <p className="text-[9px] text-slate-500 mt-1">Challenges left: {ch.team1}</p>
-        </div>
-        <div className="p-3 rounded-2xl bg-slate-800/50 border border-slate-700/50">
-          <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Team 2</p>
-          <p className="text-[10px] font-bold text-amber-400">Y {c2.yellow} · R {c2.red}</p>
-          <p className="text-[9px] text-slate-500 mt-1">Challenges left: {ch.team2}</p>
-        </div>
-      </div>
-
-      {/* Huge Vertical Scores */}
-      <div className="mt-10 w-full max-w-sm mx-auto px-6 bg-[#0f172a]/50 py-10 rounded-3xl border border-slate-700/30">
-          <div className="flex flex-col items-center">
-             <Motion.span 
-               key={team2.score}
-               initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-               className={`text-9xl font-black leading-none drop-shadow-xl ${servingTeam === 2 ? 'text-[#e0f146]' : 'text-slate-200'}`}
-             >
-               {team2.score}
-             </Motion.span>
-             <span className="text-[#84cc16] font-bold tracking-[0.3em] uppercase text-xs mt-4">Points</span>
-          </div>
-
-          <div className="w-full h-px border-t border-slate-700/50 my-10"></div>
-
-          <div className="flex flex-col items-center">
-             <Motion.span 
-               key={team1.score}
-               initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-               className={`text-9xl font-black leading-none drop-shadow-xl ${servingTeam === 1 ? 'text-[#e0f146]' : 'text-slate-200'}`}
-             >
-               {team1.score}
-             </Motion.span>
-             <span className="text-slate-500 font-bold tracking-[0.3em] uppercase text-xs mt-4">Points</span>
-          </div>
-      </div>
-
-      {/* Court Orientation Mini Map */}
-      {status !== 'suspended' && (
-        <div className="mt-12 px-6 max-w-lg mx-auto w-full mb-12">
-          <div className="flex justify-between items-center mb-4">
-             <span className="text-slate-400 font-bold uppercase tracking-wider text-xs">Court<br/>Orientation</span>
-             <span className="text-[#e0f146] font-bold uppercase tracking-wider text-right text-xs flex items-center gap-2">
-               <span className="w-1.5 h-1.5 rounded-full bg-[#e0f146]"></span>
-               {servingDetails.serverName}<br/>Serving
-             </span>
-          </div>
-
-          <div className="w-full aspect-[2/1] bg-[#0b1120] border-2 border-slate-700 rounded-sm relative flex shadow-2xl p-0.5 box-border">
-            <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-[#e0f146] shadow-[0_0_8px_#e0f146] -translate-x-1/2 z-10"></div>
-            
-            <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ preserveAspectRatio: 'none' }}>
-               <path d={servingTeam === 1 
-                  ? (servingDetails.serveSidePos === 1 ? "M 25% 75% Q 50% 25% 75% 25%" : "M 25% 25% Q 50% 75% 75% 75%") 
-                  : (servingDetails.serveSidePos === 1 ? "M 75% 75% Q 50% 25% 25% 25%" : "M 75% 25% Q 50% 75% 25% 75%")} 
-                 stroke="#e0f146" strokeWidth="2" strokeDasharray="6,6" fill="none" opacity="0.4" 
-               />
-            </svg>
-
-            <div className="flex-1 border-r border-[#e0f146]/50 relative">
-               <div className="absolute top-0 bottom-0 right-0 w-12 border-l border-slate-700"></div>
-               <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-700"></div>
-               <div className={`absolute ${servingTeam === 1 && servingDetails.serveSidePos === 1 ? 'bottom-1/4' : 'top-1/4'} left-1/4 -translate-x-1/2 -translate-y-1/2`}>
-                 <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${servingTeam === 1 ? 'border-[#e0f146] text-[#e0f146]' : 'border-slate-500 text-slate-500'}`}>
-                   {getAvatarLetter(t1Name)}
-                 </div>
-               </div>
-            </div>
-
-            <div className="flex-1 relative">
-               <div className="absolute top-0 bottom-0 left-0 w-12 border-r border-slate-700"></div>
-               <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-700"></div>
-               <div className={`absolute ${servingTeam === 2 && servingDetails.serveSidePos === 1 ? 'bottom-1/4' : 'top-1/4'} right-1/4 translate-x-1/2 -translate-y-1/2`}>
-                 <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${servingTeam === 2 ? 'border-[#e0f146] text-[#e0f146]' : 'border-slate-500 text-slate-500'}`}>
-                   {getAvatarLetter(t2Name)}
-                 </div>
-               </div>
+              <div className={`absolute ${servingTeam === 2 ? serviceLaneXClass : receiveLaneXClass} top-[80%] -translate-x-1/2 -translate-y-1/2`}>
+                <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[9px] font-bold ${servingTeam === 2 ? 'border-[#e0f146] text-[#e0f146] bg-[#e0f146]/5' : 'border-slate-500 text-slate-500'}`}>
+                  {getAvatarLetter(t2Name)}
+                </div>
+              </div>
             </div>
           </div>
-          
-          <div className="flex justify-between mt-3 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-             <span>Home Side</span>
-             <span>Away Side</span>
+
+          <div className="p-2 bg-slate-800/25 border border-slate-700/40 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-xs font-black uppercase ${servingTeam === 2 ? 'text-[#e0f146]' : 'text-white'}`}>{t2Name}</p>
+                <p className="text-[8px] text-slate-500 uppercase">Sets {team2?.sets ?? 0}</p>
+              </div>
+              <Motion.span
+                key={team2.score}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className={`text-4xl font-black tabular-nums ${servingTeam === 2 ? 'text-[#e0f146]' : 'text-slate-300'}`}
+              >
+                {team2.score}
+              </Motion.span>
+            </div>
           </div>
         </div>
-      )}
 
-      {status === 'suspended' && (
-        <div className="mt-12 px-6 flex flex-col items-center">
-           <div className="p-12 bg-amber-500/10 border border-amber-500/30 rounded-3xl text-center w-full">
-              <Activity className="text-amber-500 mx-auto mb-4" size={48} />
-              <h3 className="text-[#e0f146] font-black italic tracking-widest text-xl uppercase mb-2">Match Suspended</h3>
-              <p className="text-slate-400 font-medium text-sm">Waiting for umpire to resume the match (Rain/Injury delay).</p>
-           </div>
+        {officiatingMode === 'official' && (
+          <div className="mt-2 grid grid-cols-2 gap-2 text-center">
+            <div className="p-2 rounded-xl bg-slate-800/40 border border-slate-700/50">
+              <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Team 1</p>
+              <p className="text-[9px] font-bold text-amber-400">Y {c1.yellow} · R {c1.red} · Ch {ch.team1}</p>
+            </div>
+            <div className="p-2 rounded-xl bg-slate-800/40 border border-slate-700/50">
+              <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Team 2</p>
+              <p className="text-[9px] font-bold text-amber-400">Y {c2.yellow} · R {c2.red} · Ch {ch.team2}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-2 space-y-2">
+          {liveToast && (
+            <div className="p-2 rounded-xl bg-[#e0f146]/10 border border-[#e0f146]/30 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#e0f146]">
+                {liveToast}
+              </p>
+            </div>
+          )}
+
+          <div className="p-2 rounded-xl bg-slate-800/30 border border-slate-700/40">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Live Updates</p>
+              <p className="text-[8px] text-slate-500 uppercase">Viewer Feed</p>
+            </div>
+            <div className="space-y-1">
+              {(updates.length ? updates : [{ id: 'idle', message: 'Waiting for next rally update...' }]).map((u) => (
+                <p key={u.id} className="text-[9px] font-bold text-slate-300">
+                  {u.message}
+                </p>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-2 rounded-xl bg-slate-800/30 border border-slate-700/40">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Match Insights</p>
+              <p className="text-[8px] text-slate-500 uppercase">Point Win Ratio</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-2 rounded-lg bg-slate-800/60 border border-slate-700/50 text-center">
+                <p className="text-[8px] text-slate-500 uppercase">{t1Name}</p>
+                <p className="text-sm font-black text-[#e0f146]">{team1WinRatio}%</p>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-800/60 border border-slate-700/50 text-center">
+                <p className="text-[8px] text-slate-500 uppercase">{t2Name}</p>
+                <p className="text-sm font-black text-slate-300">{team2WinRatio}%</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-xl bg-slate-800/30 border border-slate-700/40">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Set Progress Graph</p>
+              <p className="text-[8px] text-slate-500 uppercase">Race to {targetPoints}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-2 rounded-lg bg-slate-800/60 border border-slate-700/50">
+                <p className="text-[8px] text-slate-500 uppercase mb-1">{t1Name}</p>
+                <div className="h-1.5 bg-slate-700/70 rounded overflow-hidden">
+                  <div className="h-full bg-[#e0f146]" style={{ width: `${Math.max(3, t1Progress)}%` }} />
+                </div>
+                <p className="mt-1 text-[9px] font-black text-[#e0f146]">{t1Progress}%</p>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-800/60 border border-slate-700/50">
+                <p className="text-[8px] text-slate-500 uppercase mb-1">{t2Name}</p>
+                <div className="h-1.5 bg-slate-700/70 rounded overflow-hidden">
+                  <div className="h-full bg-slate-300" style={{ width: `${Math.max(3, t2Progress)}%` }} />
+                </div>
+                <p className="mt-1 text-[9px] font-black text-slate-300">{t2Progress}%</p>
+              </div>
+            </div>
+            <p className="mt-2 text-[9px] text-slate-400">
+              Live projection: <span className="font-black text-[#e0f146]">{projectedWinner}</span>
+            </p>
+          </div>
         </div>
-      )}
 
+        {status === 'suspended' && (
+          <div className="mt-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/30">
+            <p className="text-[10px] font-bold text-amber-300 uppercase text-center">
+              Match Suspended{` ${suspendReason ? `- ${suspendReason}` : ''}`}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

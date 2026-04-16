@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { motion as Motion } from 'framer-motion';
 import { HelmetProvider } from 'react-helmet-async';
 import { useAuthStore } from './store/useAuthStore';
@@ -27,10 +27,10 @@ const ScreenWrapper = ({ children }) => (
   </Motion.div>
 );
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = () => {
   const { user } = useAuthStore();
   if (!user) return <Navigate to="/auth" replace />;
-  return <ScreenWrapper>{children}</ScreenWrapper>;
+  return <ScreenWrapper><Outlet /></ScreenWrapper>;
 };
 
 function AppRoutes() {
@@ -55,15 +55,17 @@ function AppRoutes() {
           {/* Public Auth Gateway */}
           <Route path="/auth" element={user ? <Navigate to="/" replace /> : <ScreenWrapper><AuthScreen /></ScreenWrapper>} />
           
-          {/* All other routes are protected */}
-          <Route path="/" element={<ProtectedRoute><HomeScreen /></ProtectedRoute>} />
-          <Route path="/viewer/:matchId" element={<ProtectedRoute><ViewerScoreScreen /></ProtectedRoute>} />
-          <Route path="/setup" element={<ProtectedRoute><SetupScreen /></ProtectedRoute>} />
-          <Route path="/live" element={<ProtectedRoute><LiveScoreScreen /></ProtectedRoute>} />
-          <Route path="/result/:matchId" element={<ProtectedRoute><ResultScreen /></ProtectedRoute>} />
-          <Route path="/history" element={<ProtectedRoute><HistoryScreen /></ProtectedRoute>} />
-          <Route path="/players" element={<ProtectedRoute><PlayersScreen /></ProtectedRoute>} />
-          <Route path="/tournaments" element={<ProtectedRoute><TournamentScreen /></ProtectedRoute>} />
+          {/* All non-auth routes protected by default */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<HomeScreen />} />
+            <Route path="/viewer/:matchId" element={<ViewerScoreScreen />} />
+            <Route path="/setup" element={<SetupScreen />} />
+            <Route path="/live" element={<LiveScoreScreen />} />
+            <Route path="/result/:matchId" element={<ResultScreen />} />
+            <Route path="/history" element={<HistoryScreen />} />
+            <Route path="/players" element={<PlayersScreen />} />
+            <Route path="/tournaments" element={<TournamentScreen />} />
+          </Route>
           
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />

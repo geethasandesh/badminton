@@ -19,15 +19,15 @@ import { useAuthStore } from '../store/useAuthStore';
 
 function TeamScoreCard({ team, teamIdx, isServing, setsToWin, status, addPoint }) {
   return (
-    <div className="flex flex-col mb-3 mt-1 relative">
+    <div className="flex flex-col mb-2 mt-1 relative">
       {isServing && (
-        <div className="absolute -top-3 left-0 px-3 py-1 bg-[#e0f146] text-slate-900 text-[9px] font-black tracking-widest rounded-tl-lg rounded-br-lg shadow-sm z-10">
+        <div className="absolute -top-2 left-0 px-2 py-0.5 bg-[#e0f146] text-slate-900 text-[8px] font-black tracking-widest rounded-tl-md rounded-br-md shadow-sm z-10">
           SERVING
         </div>
       )}
-      <div className="flex justify-between items-start mb-2 px-1">
+      <div className="flex justify-between items-start mb-1 px-1">
         <div>
-          <h2 className={`text-2xl font-black italic tracking-wide uppercase ${isServing ? 'text-white' : 'text-slate-300'}`}>
+          <h2 className={`text-lg font-black italic tracking-wide uppercase ${isServing ? 'text-white' : 'text-slate-300'}`}>
             {team.name}
           </h2>
           <div className="flex gap-1 mt-1">
@@ -37,33 +37,32 @@ function TeamScoreCard({ team, teamIdx, isServing, setsToWin, status, addPoint }
           </div>
         </div>
         <div className="text-right">
-          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Sets Won</span>
-          <div className="text-sm font-bold text-slate-300">{team.sets}</div>
+          <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Sets Won</span>
+          <div className="text-xs font-bold text-slate-300">{team.sets}</div>
         </div>
       </div>
 
-      <div className="flex justify-center mb-3 mt-2">
+      <div className="flex items-center justify-between gap-3">
         <Motion.span
           key={team.score}
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className={`text-8xl tabular-nums font-black leading-none tracking-tighter drop-shadow-xl ${isServing ? 'text-[#e0f146]' : 'text-slate-400'}`}
+          className={`text-5xl tabular-nums font-black leading-none tracking-tighter drop-shadow-xl pl-1 ${isServing ? 'text-[#e0f146]' : 'text-slate-400'}`}
         >
           {team.score}
         </Motion.span>
+        <button
+          type="button"
+          onClick={() => status === 'live' && addPoint(teamIdx)}
+          disabled={status !== 'live'}
+          className={`min-w-[120px] px-4 py-2 rounded-xl font-black text-xs tracking-widest uppercase items-center justify-center flex gap-2 transition-all active:scale-[0.98]
+            ${isServing ? 'bg-[#e0f146] text-slate-900 shadow-[0_0_14px_rgba(224,241,70,0.25)] hover:bg-lime-400' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}
+            ${status !== 'live' ? 'opacity-50 cursor-not-allowed' : ''}
+          `}
+        >
+          <span>+ POINT</span>
+        </button>
       </div>
-
-      <button
-        type="button"
-        onClick={() => status === 'live' && addPoint(teamIdx)}
-        disabled={status !== 'live'}
-        className={`w-full py-3 rounded-2xl font-black text-sm tracking-widest uppercase items-center justify-center flex gap-2 transition-all active:scale-[0.98]
-          ${isServing ? 'bg-[#e0f146] text-slate-900 shadow-[0_0_20px_rgba(224,241,70,0.3)] hover:bg-lime-400' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}
-          ${status !== 'live' ? 'opacity-50 cursor-not-allowed' : ''}
-        `}
-      >
-        <span>+ POINT</span>
-      </button>
     </div>
   );
 }
@@ -89,6 +88,7 @@ export default function LiveScoreScreen() {
     changeOfEndsDue,
     gameIntervalSec,
     formatPreset,
+    officiatingMode,
     team1Cards,
     team2Cards,
     challengesRemaining,
@@ -147,6 +147,9 @@ export default function LiveScoreScreen() {
   };
 
   const servingDetails = getServingDetails();
+  const getAvatarLetter = (name) => (name ? name.substring(0, 1).toUpperCase() : '?');
+  const serviceLaneXClass = servingDetails.serveSidePos === 1 ? 'left-[68%]' : 'left-[32%]';
+  const receiveLaneXClass = servingDetails.serveSidePos === 1 ? 'left-[32%]' : 'left-[68%]';
 
   const handleStatusChange = (newStatus, reason = undefined) => {
     updateStatus(newStatus, reason);
@@ -166,7 +169,7 @@ export default function LiveScoreScreen() {
   const ch = challengesRemaining || { team1: 2, team2: 2 };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0b1120] text-white pb-32 px-6 pt-3 relative max-w-[440px] mx-auto w-full">
+    <div className="flex flex-col min-h-screen bg-[#0b1120] text-white pb-6 px-6 pt-3 relative max-w-[440px] mx-auto w-full">
       {changeOfEndsDue && status === 'live' && (
         <div className="mb-4 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-amber-400">
@@ -217,73 +220,80 @@ export default function LiveScoreScreen() {
         </div>
       </div>
 
-      <TeamScoreCard
-        team={team1}
-        teamIdx={1}
-        isServing={servingTeam === 1}
-        setsToWin={setsToWin}
-        status={status}
-        addPoint={addPoint}
-      />
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex flex-col">
+          <TeamScoreCard
+            team={team1}
+            teamIdx={1}
+            isServing={servingTeam === 1}
+            setsToWin={setsToWin}
+            status={status}
+            addPoint={addPoint}
+          />
 
-      <div className="w-full aspect-[1/2] max-w-[150px] mx-auto bg-[#0b1120] border-2 border-slate-700 rounded-xl relative flex flex-col p-1 box-border shadow-xl my-2 overflow-hidden">
-        <div className="flex-1 border-b-2 border-slate-700 flex relative">
-          <div
-            className={`flex-1 border-r border-slate-700 relative ${
-              servingTeam === 1 && servingDetails.serveSidePos === 1 ? 'bg-[#e0f146]/10' : ''
-            }`}
-          >
-            <div
-              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${
-                servingTeam === 1 && Math.abs(currentSet) % 2 !== 0 ? 'bg-[#e0f146] shadow-[0_0_8px_#e0f146]' : 'bg-slate-600'
-              }`}
-            ></div>
+          <div className="my-1 w-full">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Court Orientation</span>
+              <span className="text-[#e0f146] font-bold uppercase tracking-wider text-[9px] text-right flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#e0f146]"></span>
+                {(servingDetails?.serverName || 'Player').toUpperCase()} SERVING
+              </span>
+            </div>
+
+            <div className="w-[196px] h-[352px] mx-auto bg-[#0b1120] border border-slate-700 rounded-lg relative shadow-xl p-0.5 box-border overflow-hidden">
+              {/* Main singles center line */}
+              <div className="absolute inset-y-0 left-1/2 w-[1px] bg-slate-600/80 -translate-x-1/2"></div>
+              {/* Net */}
+              <div className="absolute inset-x-0 top-1/2 h-[2px] bg-[#e0f146]/60 shadow-[0_0_8px_#e0f146] -translate-y-1/2"></div>
+              {/* Short service lines */}
+              <div className="absolute inset-x-[10%] top-[34%] h-[1px] bg-slate-600/80"></div>
+              <div className="absolute inset-x-[10%] top-[66%] h-[1px] bg-slate-600/80"></div>
+              {/* Side alleys (doubles lanes) */}
+              <div className="absolute inset-y-[2%] left-[10%] w-[1px] bg-slate-700/70"></div>
+              <div className="absolute inset-y-[2%] left-[90%] w-[1px] bg-slate-700/70 -translate-x-full"></div>
+              {/* Mid guides for visual court depth */}
+              <div className="absolute inset-x-0 top-[20%] h-[1px] bg-slate-800/90"></div>
+              <div className="absolute inset-x-0 top-[80%] h-[1px] bg-slate-800/90"></div>
+
+              <div className={`absolute ${servingTeam === 1 ? serviceLaneXClass : receiveLaneXClass} top-[20%] -translate-x-1/2 -translate-y-1/2`}>
+                <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[9px] font-bold ${servingTeam === 1 ? 'border-[#e0f146] text-[#e0f146] bg-[#e0f146]/5' : 'border-slate-500 text-slate-500'}`}>
+                  {getAvatarLetter(team1?.name)}
+                </div>
+              </div>
+
+              <div className={`absolute ${servingTeam === 2 ? serviceLaneXClass : receiveLaneXClass} top-[80%] -translate-x-1/2 -translate-y-1/2`}>
+                <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[9px] font-bold ${servingTeam === 2 ? 'border-[#e0f146] text-[#e0f146] bg-[#e0f146]/5' : 'border-slate-500 text-slate-500'}`}>
+                  {getAvatarLetter(team2?.name)}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between mt-1 text-[8px] text-slate-500 font-bold uppercase tracking-widest">
+              <span>Team 1 Side</span>
+              <span>Team 2 Side</span>
+            </div>
           </div>
-          <div className={`flex-1 relative ${servingTeam === 1 && servingDetails.serveSidePos === 0 ? 'bg-[#e0f146]/10' : ''}`}>
-            <div
-              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${
-                servingTeam === 1 && Math.abs(currentSet) % 2 === 0 ? 'bg-[#e0f146] shadow-[0_0_8px_#e0f146]' : 'bg-slate-600'
-              }`}
-            ></div>
-          </div>
+
+          <TeamScoreCard
+            team={team2}
+            teamIdx={2}
+            isServing={servingTeam === 2}
+            setsToWin={setsToWin}
+            status={status}
+            addPoint={addPoint}
+          />
         </div>
-        <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-[#e0f146]/50 shadow-[0_0_5px_#e0f146] -translate-y-1/2"></div>
-        <div className="flex-1 flex relative">
-          <div className={`flex-1 border-r border-slate-700 relative ${servingTeam === 2 && servingDetails.serveSidePos === 0 ? 'bg-[#e0f146]/10' : ''}`}>
-            <div
-              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${
-                servingTeam === 2 && Math.abs(currentSet) % 2 !== 0 ? 'bg-[#e0f146] shadow-[0_0_8px_#e0f146]' : 'bg-slate-600'
-              }`}
-            ></div>
-          </div>
-          <div className={`flex-1 relative ${servingTeam === 2 && servingDetails.serveSidePos === 1 ? 'bg-[#e0f146]/10' : ''}`}>
-            <div
-              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${
-                servingTeam === 2 && Math.abs(currentSet) % 2 === 0 ? 'bg-[#e0f146] shadow-[0_0_8px_#e0f146]' : 'bg-slate-600'
-              }`}
-            ></div>
-          </div>
-        </div>
-      </div>
 
-      <TeamScoreCard
-        team={team2}
-        teamIdx={2}
-        isServing={servingTeam === 2}
-        setsToWin={setsToWin}
-        status={status}
-        addPoint={addPoint}
-      />
-
-      <div className="grid grid-cols-2 gap-2 mb-3 text-[9px] font-black uppercase tracking-widest">
-        <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700">
-          <p className="text-slate-500 mb-2">Team 1 · cards</p>
-          <div className="flex gap-2">
+        {officiatingMode === 'official' && (
+        <div className="grid grid-cols-2 gap-2 mb-2 text-[8px] font-black uppercase tracking-widest">
+        <div className="p-2 bg-slate-800/80 rounded-2xl border border-slate-700">
+          <p className="text-slate-500 mb-1">Team 1 · cards</p>
+          <div className="flex gap-1.5">
             <button
               type="button"
               disabled={status !== 'live'}
               onClick={() => addCard(1, 'yellow')}
-              className="flex-1 py-2 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 disabled:opacity-40"
+              className="flex-1 py-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 disabled:opacity-40"
             >
               Y {cards1.yellow}
             </button>
@@ -291,7 +301,7 @@ export default function LiveScoreScreen() {
               type="button"
               disabled={status !== 'live'}
               onClick={() => addCard(1, 'red')}
-              className="flex-1 py-2 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 disabled:opacity-40"
+              className="flex-1 py-1.5 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 disabled:opacity-40"
             >
               R {cards1.red}
             </button>
@@ -299,20 +309,20 @@ export default function LiveScoreScreen() {
               type="button"
               disabled={status !== 'live' || ch.team1 <= 0}
               onClick={() => recordChallenge(1)}
-              className="flex-1 py-2 rounded-lg bg-slate-700 text-[#e0f146] border border-slate-600 disabled:opacity-40"
+              className="flex-1 py-1.5 rounded-lg bg-slate-700 text-[#e0f146] border border-slate-600 disabled:opacity-40"
             >
               Ch {ch.team1}
             </button>
           </div>
         </div>
-        <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700">
-          <p className="text-slate-500 mb-2">Team 2 · cards</p>
-          <div className="flex gap-2">
+        <div className="p-2 bg-slate-800/80 rounded-2xl border border-slate-700">
+          <p className="text-slate-500 mb-1">Team 2 · cards</p>
+          <div className="flex gap-1.5">
             <button
               type="button"
               disabled={status !== 'live'}
               onClick={() => addCard(2, 'yellow')}
-              className="flex-1 py-2 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 disabled:opacity-40"
+              className="flex-1 py-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 disabled:opacity-40"
             >
               Y {cards2.yellow}
             </button>
@@ -320,7 +330,7 @@ export default function LiveScoreScreen() {
               type="button"
               disabled={status !== 'live'}
               onClick={() => addCard(2, 'red')}
-              className="flex-1 py-2 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 disabled:opacity-40"
+              className="flex-1 py-1.5 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 disabled:opacity-40"
             >
               R {cards2.red}
             </button>
@@ -328,62 +338,64 @@ export default function LiveScoreScreen() {
               type="button"
               disabled={status !== 'live' || ch.team2 <= 0}
               onClick={() => recordChallenge(2)}
-              className="flex-1 py-2 rounded-lg bg-slate-700 text-[#e0f146] border border-slate-600 disabled:opacity-40"
+              className="flex-1 py-1.5 rounded-lg bg-slate-700 text-[#e0f146] border border-slate-600 disabled:opacity-40"
             >
               Ch {ch.team2}
             </button>
           </div>
         </div>
-      </div>
+        </div>
+        )}
 
-      <div className="grid grid-cols-3 gap-2 mb-4 font-black uppercase italic tracking-widest text-[9px]">
+        <div className="grid grid-cols-3 gap-2 mb-2 font-black uppercase italic tracking-widest text-[8px]">
         <button
           onClick={undoPoint}
-          className="flex flex-col items-center justify-center p-3 bg-slate-800 rounded-2xl border border-slate-700 hover:bg-slate-700 text-[#60a5fa]"
+          className="flex flex-col items-center justify-center p-2 bg-slate-800 rounded-2xl border border-slate-700 hover:bg-slate-700 text-[#60a5fa]"
         >
-          <RotateCcw className="mb-1 w-5 h-5" />
+          <RotateCcw className="mb-0.5 w-4 h-4" />
           <span>Undo</span>
         </button>
         <button
           onClick={() => setShowOptions(true)}
-          className="flex flex-col items-center justify-center p-3 bg-slate-800 rounded-2xl border border-slate-700 hover:bg-slate-700 text-[#e0f146]"
+          className="flex flex-col items-center justify-center p-2 bg-slate-800 rounded-2xl border border-slate-700 hover:bg-slate-700 text-[#e0f146]"
         >
-          <Flag className="mb-1 w-5 h-5" />
+          <Flag className="mb-0.5 w-4 h-4" />
           <span>Options</span>
         </button>
         <button
           type="button"
           onClick={startIntervalTimer}
-          className="flex flex-col items-center justify-center p-3 bg-slate-800 rounded-2xl border border-slate-700 hover:bg-slate-700 text-slate-300"
+          className="flex flex-col items-center justify-center p-2 bg-slate-800 rounded-2xl border border-slate-700 hover:bg-slate-700 text-slate-300"
         >
-          <Timer className="mb-1 w-5 h-5" />
+          <Timer className="mb-0.5 w-4 h-4" />
           <span>Interval</span>
         </button>
-      </div>
+        </div>
 
-      <div className="mb-4">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-xs font-black italic tracking-widest uppercase">Match Data</h3>
-          <span className="text-[9px] font-bold text-slate-500 uppercase">Automated</span>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 bg-slate-800 rounded-xl flex justify-between items-center">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Duration</span>
-            <span className="text-sm font-black italic text-[#60a5fa]">{formatTime(matchTime)}</span>
+        <div className="mb-1">
+          <div className="flex justify-between items-center mb-1">
+            <h3 className="text-xs font-black italic tracking-widest uppercase">Match Data</h3>
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Automated</span>
           </div>
-          <div className="p-3 bg-slate-800 rounded-xl flex justify-between items-center">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
-            <span className={`text-sm font-black italic ${status === 'suspended' ? 'text-amber-500' : 'text-lime-500'}`}>
-              {status.toUpperCase()}
-            </span>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="p-2 bg-slate-800 rounded-xl flex justify-between items-center">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Duration</span>
+              <span className="text-sm font-black italic text-[#60a5fa]">{formatTime(matchTime)}</span>
+            </div>
+            <div className="p-2 bg-slate-800 rounded-xl flex justify-between items-center">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
+              <span className={`text-sm font-black italic ${status === 'suspended' ? 'text-amber-500' : 'text-lime-500'}`}>
+                {status.toUpperCase()}
+              </span>
+            </div>
           </div>
         </div>
-        {status === 'suspended' && suspendReason && (
-          <p className="mt-2 text-[10px] font-bold text-amber-500/80 uppercase tracking-widest text-center">
-            Reason: {suspendReason}
-          </p>
-        )}
       </div>
+      {status === 'suspended' && suspendReason && (
+        <p className="mt-1 text-[10px] font-bold text-amber-500/80 uppercase tracking-widest text-center">
+          Reason: {suspendReason}
+        </p>
+      )}
 
       <AnimatePresence>
         {showOptions && (
@@ -391,102 +403,79 @@ export default function LiveScoreScreen() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#0b1120]/95 z-[100] flex items-end justify-center px-6 pb-12"
+            className="fixed inset-0 bg-[#0b1120]/45 backdrop-blur-md z-[100] flex items-center justify-center px-4 py-6"
           >
             <Motion.div
-              initial={{ y: 100 }}
+              initial={{ y: 40, opacity: 0.8 }}
               animate={{ y: 0 }}
-              exit={{ y: 100 }}
-              className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-[2.5rem] p-8 max-h-[85vh] overflow-y-auto"
+              exit={{ y: 40, opacity: 0.8 }}
+              className="w-full max-w-xs bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 max-h-[70vh] overflow-y-auto shadow-2xl"
             >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-black italic tracking-widest text-white uppercase">Match Options</h2>
-                <button onClick={() => setShowOptions(false)} className="p-2 bg-slate-800 rounded-full text-slate-400">
-                  <X size={20} />
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-sm font-black tracking-widest text-white uppercase">Options</h2>
+                <button onClick={() => setShowOptions(false)} className="p-1.5 bg-slate-800/80 rounded-full text-slate-400">
+                  <X size={16} />
                 </button>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {status === 'live' ? (
                   <button
                     onClick={() => handleStatusChange('suspended', 'weather')}
-                    className="w-full py-4 bg-slate-800/80 border border-slate-600 rounded-2xl flex items-center justify-center gap-4 text-slate-200 active:scale-95 transition-all"
+                    className="w-full py-2.5 bg-slate-800/80 border border-slate-600 rounded-xl flex items-center justify-center gap-3 text-slate-200 active:scale-95 transition-all"
                   >
-                    <CloudRain size={24} />
-                    <div className="text-left">
-                      <p className="font-black italic tracking-widest uppercase leading-none mb-1">Weather delay</p>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase">Pause match</p>
-                    </div>
+                    <CloudRain size={16} />
+                    <p className="font-black tracking-widest uppercase text-xs">Weather delay</p>
                   </button>
                 ) : null}
 
                 {status === 'live' ? (
                   <button
                     onClick={() => handleStatusChange('suspended', 'injury')}
-                    className="w-full py-4 bg-slate-800/80 border border-slate-600 rounded-2xl flex items-center justify-center gap-4 text-slate-200 active:scale-95 transition-all"
+                    className="w-full py-2.5 bg-slate-800/80 border border-slate-600 rounded-xl flex items-center justify-center gap-3 text-slate-200 active:scale-95 transition-all"
                   >
-                    <Stethoscope size={24} />
-                    <div className="text-left">
-                      <p className="font-black italic tracking-widest uppercase leading-none mb-1">Injury / illness</p>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase">Pause for medical</p>
-                    </div>
+                    <Stethoscope size={16} />
+                    <p className="font-black tracking-widest uppercase text-xs">Injury / illness</p>
                   </button>
                 ) : null}
 
                 {status === 'live' ? (
                   <button
                     onClick={() => handleStatusChange('suspended', 'interval')}
-                    className="w-full py-4 bg-slate-800/80 border border-slate-600 rounded-2xl flex items-center justify-center gap-4 text-slate-200 active:scale-95 transition-all"
+                    className="w-full py-2.5 bg-slate-800/80 border border-slate-600 rounded-xl flex items-center justify-center gap-3 text-slate-200 active:scale-95 transition-all"
                   >
-                    <Timer size={24} />
-                    <div className="text-left">
-                      <p className="font-black italic tracking-widest uppercase leading-none mb-1">Official interval</p>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase">Between games / break</p>
-                    </div>
+                    <Timer size={16} />
+                    <p className="font-black tracking-widest uppercase text-xs">Official interval</p>
                   </button>
                 ) : null}
 
                 {status === 'suspended' ? (
                   <button
                     onClick={() => handleStatusChange('live')}
-                    className="w-full py-4 bg-lime-500/10 border border-lime-500/30 rounded-2xl flex items-center justify-center gap-4 text-lime-500 active:scale-95 transition-all"
+                    className="w-full py-2.5 bg-lime-500/10 border border-lime-500/30 rounded-xl flex items-center justify-center gap-3 text-lime-500 active:scale-95 transition-all"
                   >
-                    <Activity size={24} />
-                    <div className="text-left">
-                      <p className="font-black italic tracking-widest uppercase leading-none mb-1">Resume Match</p>
-                      <p className="text-[10px] font-bold text-lime-500/60 uppercase">Continue play</p>
-                    </div>
+                    <Activity size={16} />
+                    <p className="font-black tracking-widest uppercase text-xs">Resume match</p>
                   </button>
                 ) : null}
 
                 <button
                   onClick={() => handleStatusChange('finished')}
-                  className="w-full py-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center justify-center gap-4 text-rose-500 active:scale-95 transition-all"
+                  className="w-full py-2.5 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-center justify-center gap-3 text-rose-500 active:scale-95 transition-all"
                 >
-                  <AlertTriangle size={24} />
-                  <div className="text-left">
-                    <p className="font-black italic tracking-widest uppercase leading-none mb-1">End Match</p>
-                    <p className="text-[10px] font-bold text-rose-500/60 uppercase">Withdraw / Abandon</p>
-                  </div>
+                  <AlertTriangle size={16} />
+                  <p className="font-black tracking-widest uppercase text-xs">End match</p>
                 </button>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-700/50 space-y-2">
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <Gavel size={12} /> Misconduct & challenges
-                </p>
-                <p className="text-[10px] text-slate-500 leading-relaxed">
-                  Use yellow/red on the cards row above. Challenges decrement per team (manual BWF-style tracking).
-                </p>
-                <p className="text-[10px] text-slate-500 leading-relaxed flex items-start gap-2">
-                  <Swords size={14} className="text-[#e0f146] shrink-0 mt-0.5" />
-                  Challenge: tap Ch when a team challenges a call; remaining count is stored on the match.
+              <div className="mt-3 pt-3 border-t border-slate-700/50">
+                <p className="text-[9px] text-slate-400 leading-relaxed flex items-start gap-2">
+                  <Gavel size={12} className="shrink-0 mt-0.5" />
+                  {officiatingMode === 'official'
+                    ? 'Cards and challenges are available on the main live screen.'
+                    : 'Basic mode is active. Official cards/challenges are hidden.'}
                 </p>
               </div>
-
-              <p className="mt-6 text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest px-4">
-                Ending removes the match from the live feed. Deep links to viewer/result still work.
-              </p>
             </Motion.div>
           </Motion.div>
         )}

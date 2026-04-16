@@ -19,6 +19,7 @@ const withMatchDefaults = (data = {}) => ({
   challengesRemaining: { ...defaultChallenges(), ...data.challengesRemaining },
   changeOfEndsDue: data.changeOfEndsDue ?? false,
   formatPreset: data.formatPreset ?? 'rally_21',
+  officiatingMode: data.officiatingMode ?? 'official',
   gameIntervalSec: data.gameIntervalSec ?? 60,
   suspendReason: data.suspendReason ?? null,
 });
@@ -40,6 +41,7 @@ const initialMatchState = {
   pointsToWin: 21,
   setsToWin: 2,
   formatPreset: 'rally_21',
+  officiatingMode: 'official',
   gameIntervalSec: 60,
   changeOfEndsDue: false,
   team1Cards: defaultCards(),
@@ -52,7 +54,7 @@ export const useMatchStore = create((set, get) => ({
   ...initialMatchState,
   
   startMatch: async (config, umpireId) => {
-    const { matchType, players, pointsToWin, setsToWin, formatPreset, gameIntervalSec } = config;
+    const { matchType, players, pointsToWin, setsToWin, formatPreset, gameIntervalSec, officiatingMode } = config;
     let t1, t2;
     if (matchType === 'singles') {
       t1 = { name: players[0], players: [players[0]], score: 0, sets: 0 };
@@ -69,6 +71,7 @@ export const useMatchStore = create((set, get) => ({
       pointsToWin: pointsToWin || 21,
       setsToWin: setsToWin || 2,
       formatPreset: formatPreset || 'rally_21',
+      officiatingMode: officiatingMode || 'official',
       gameIntervalSec: gameIntervalSec ?? 60,
       currentSet: 1,
       servingTeam: 1,

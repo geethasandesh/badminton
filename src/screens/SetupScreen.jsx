@@ -22,6 +22,7 @@ export default function SetupScreen() {
   const [points, setPoints] = useState(21);
   const [sets, setSets] = useState(2);
   const [formatPreset, setFormatPreset] = useState('rally_21');
+  const [officiatingMode, setOfficiatingMode] = useState('basic');
   const [gameIntervalSec, setGameIntervalSec] = useState(60);
   
   // Players state - indices 0,1 for Singles, 0,1,2,3 for Doubles
@@ -117,6 +118,7 @@ export default function SetupScreen() {
       pointsToWin: points,
       setsToWin: sets,
       formatPreset,
+      officiatingMode,
       gameIntervalSec,
     }, user?.uid);
     navigate('/live');
@@ -344,6 +346,39 @@ export default function SetupScreen() {
                  </div>
               </div>
            </div>
+        </div>
+
+        <div className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-4 mb-3">
+          <label className="block text-[10px] font-black italic tracking-[0.2em] text-slate-500 uppercase mb-3">Officiating Mode</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setOfficiatingMode('basic')}
+              className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${
+                officiatingMode === 'basic'
+                  ? 'bg-[#e0f146] text-slate-900 border-[#e0f146]'
+                  : 'bg-[#0b1120] text-slate-400 border-slate-700'
+              }`}
+            >
+              Basic
+            </button>
+            <button
+              type="button"
+              onClick={() => setOfficiatingMode('official')}
+              className={`py-2 rounded-xl text-[10px] font-black uppercase border transition-all ${
+                officiatingMode === 'official'
+                  ? 'bg-[#e0f146] text-slate-900 border-[#e0f146]'
+                  : 'bg-[#0b1120] text-slate-400 border-slate-700'
+              }`}
+            >
+              Official
+            </button>
+          </div>
+          <p className="mt-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+            {officiatingMode === 'basic'
+              ? 'Basic: cleaner scoreboard without card/challenge controls.'
+              : 'Official: shows Y/R cards and challenge tracking.'}
+          </p>
         </div>
 
       </div>
