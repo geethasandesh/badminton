@@ -22,9 +22,9 @@ const BottomNav = () => {
           <div className="w-full max-w-[440px] px-4 pointer-events-auto">
             <div 
                onClick={() => navigate('/live')}
-               className="h-[72px] bg-[#0b1120]/95 backdrop-blur-md border border-slate-800/80 rounded-t-3xl flex items-center justify-center px-4 shadow-[0_-8px_32px_rgba(0,0,0,0.35)]"
+               className="h-[62px] bg-[#0b1120]/95 backdrop-blur-md border border-slate-800/80 rounded-t-3xl flex items-center justify-center px-3 shadow-[0_-8px_32px_rgba(0,0,0,0.35)]"
             >
-              <div className="flex items-center gap-3 px-5 py-3 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-rose-500 animate-pulse cursor-pointer max-w-full">
+              <div className="flex items-center gap-2 px-3 py-2 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-rose-500 animate-pulse cursor-pointer max-w-full">
                 <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
                 <span className="text-[9px] font-black tracking-widest uppercase italic text-center leading-tight">Active match — return to scoreboard</span>
               </div>
@@ -50,7 +50,7 @@ const BottomNav = () => {
         className="w-full max-w-[440px] pointer-events-auto bg-[#0b1120]/95 backdrop-blur-md border-t border-slate-800/80 rounded-t-3xl shadow-[0_-8px_32px_rgba(0,0,0,0.35)]"
         aria-label="Main navigation"
       >
-        <div className="flex items-stretch justify-around px-1 pt-2 pb-3 min-h-[72px]">
+        <div className="flex items-stretch justify-around px-1 pt-1.5 pb-2 min-h-[62px]">
           {tabs.map((tab) => {
             const active = isActive(tab.path);
             const Icon = tab.icon;
@@ -67,7 +67,7 @@ const BottomNav = () => {
                 ) : null}
                 
                 <Icon 
-                  size={20} 
+                  size={18} 
                   className={`shrink-0 transition-colors ${active ? 'text-[#b1e81f]' : 'text-slate-500'}`} 
                 />
                 <span 

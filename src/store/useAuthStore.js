@@ -80,8 +80,10 @@ export const useAuthStore = create((set) => ({
     try {
       await signOut(auth);
       set({ user: null, profile: null, loading: false });
+      return true;
     } catch (error) {
       set({ error: error.message, loading: false });
+      return false;
     }
   }
 }));

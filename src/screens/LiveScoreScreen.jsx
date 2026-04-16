@@ -19,7 +19,7 @@ import { useAuthStore } from '../store/useAuthStore';
 
 function TeamScoreCard({ team, teamIdx, isServing, setsToWin, status, addPoint }) {
   return (
-    <div className="flex flex-col mb-6 mt-2 relative">
+    <div className="flex flex-col mb-3 mt-1 relative">
       {isServing && (
         <div className="absolute -top-3 left-0 px-3 py-1 bg-[#e0f146] text-slate-900 text-[9px] font-black tracking-widest rounded-tl-lg rounded-br-lg shadow-sm z-10">
           SERVING
@@ -42,7 +42,7 @@ function TeamScoreCard({ team, teamIdx, isServing, setsToWin, status, addPoint }
         </div>
       </div>
 
-      <div className="flex justify-center mb-6 mt-4">
+      <div className="flex justify-center mb-3 mt-2">
         <Motion.span
           key={team.score}
           initial={{ scale: 0.9, opacity: 0 }}
@@ -57,7 +57,7 @@ function TeamScoreCard({ team, teamIdx, isServing, setsToWin, status, addPoint }
         type="button"
         onClick={() => status === 'live' && addPoint(teamIdx)}
         disabled={status !== 'live'}
-        className={`w-full py-4 rounded-2xl font-black text-lg tracking-widest uppercase items-center justify-center flex gap-2 transition-all active:scale-[0.98]
+        className={`w-full py-3 rounded-2xl font-black text-sm tracking-widest uppercase items-center justify-center flex gap-2 transition-all active:scale-[0.98]
           ${isServing ? 'bg-[#e0f146] text-slate-900 shadow-[0_0_20px_rgba(224,241,70,0.3)] hover:bg-lime-400' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}
           ${status !== 'live' ? 'opacity-50 cursor-not-allowed' : ''}
         `}
@@ -166,7 +166,7 @@ export default function LiveScoreScreen() {
   const ch = challengesRemaining || { team1: 2, team2: 2 };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0b1120] text-white pb-32 px-6 pt-4 relative max-w-[440px] mx-auto w-full">
+    <div className="flex flex-col min-h-screen bg-[#0b1120] text-white pb-32 px-6 pt-3 relative max-w-[440px] mx-auto w-full">
       {changeOfEndsDue && status === 'live' && (
         <div className="mb-4 p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-amber-400">
@@ -200,7 +200,7 @@ export default function LiveScoreScreen() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-800/80">
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800/80">
         <div className="flex items-center gap-2">
           <div className={`w-1.5 h-1.5 rounded-full ${status === 'live' ? 'bg-rose-500 animate-pulse' : 'bg-amber-500'}`}></div>
           <span className={`text-[10px] font-bold tracking-widest uppercase ${status === 'live' ? 'text-[#60a5fa]' : 'text-amber-500'}`}>
@@ -226,7 +226,7 @@ export default function LiveScoreScreen() {
         addPoint={addPoint}
       />
 
-      <div className="w-full aspect-[1/2] max-w-[200px] mx-auto bg-[#0b1120] border-2 border-slate-700 rounded-xl relative flex flex-col p-1 box-border shadow-2xl my-4 overflow-hidden">
+      <div className="w-full aspect-[1/2] max-w-[150px] mx-auto bg-[#0b1120] border-2 border-slate-700 rounded-xl relative flex flex-col p-1 box-border shadow-xl my-2 overflow-hidden">
         <div className="flex-1 border-b-2 border-slate-700 flex relative">
           <div
             className={`flex-1 border-r border-slate-700 relative ${
@@ -275,7 +275,7 @@ export default function LiveScoreScreen() {
         addPoint={addPoint}
       />
 
-      <div className="grid grid-cols-2 gap-3 mb-4 text-[9px] font-black uppercase tracking-widest">
+      <div className="grid grid-cols-2 gap-2 mb-3 text-[9px] font-black uppercase tracking-widest">
         <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700">
           <p className="text-slate-500 mb-2">Team 1 · cards</p>
           <div className="flex gap-2">
@@ -336,7 +336,7 @@ export default function LiveScoreScreen() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-6 font-black uppercase italic tracking-widest text-[9px]">
+      <div className="grid grid-cols-3 gap-2 mb-4 font-black uppercase italic tracking-widest text-[9px]">
         <button
           onClick={undoPoint}
           className="flex flex-col items-center justify-center p-3 bg-slate-800 rounded-2xl border border-slate-700 hover:bg-slate-700 text-[#60a5fa]"
@@ -361,7 +361,7 @@ export default function LiveScoreScreen() {
         </button>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-xs font-black italic tracking-widest uppercase">Match Data</h3>
           <span className="text-[9px] font-bold text-slate-500 uppercase">Automated</span>

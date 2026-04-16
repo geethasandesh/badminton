@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
 import { db } from '../config/firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { User, Shield, ChevronRight, UserPlus, Users, Search } from 'lucide-react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
 
 const uniq = (arr) => [...new Set(arr.filter(Boolean))];
 
@@ -33,6 +32,7 @@ export default function PlayersScreen() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [matchStats, setMatchStats] = useState({});
+  const deferredSearchTerm = useDeferredValue(searchTerm);
 
   useEffect(() => {
     // Fetch all registered players from Firestore
@@ -65,10 +65,16 @@ export default function PlayersScreen() {
     return () => unsub();
   }, []);
 
-  const filteredPlayers = players.filter(p => 
-    p.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPlayers = useMemo(() => {
+    const term = deferredSearchTerm.trim().toLowerCase();
+    if (!term) return players;
+
+    return players.filter((p) => {
+      const name = (p.displayName || '').toLowerCase();
+      const email = (p.email || '').toLowerCase();
+      return name.includes(term) || email.includes(term);
+    });
+  }, [players, deferredSearchTerm]);
 
   const avgWinRate = useMemo(() => {
     const vals = Object.values(matchStats).filter((s) => s.played > 0);
@@ -101,6 +107,8 @@ export default function PlayersScreen() {
            placeholder="Search Official Registry..." 
            value={searchTerm}
            onChange={(e) => setSearchTerm(e.target.value)}
+           autoComplete="off"
+           spellCheck={false}
            className="w-full bg-slate-800/40 border border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold placeholder-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-[#e0f146]/50 transition-all"
          />
       </div>
@@ -118,20 +126,17 @@ export default function PlayersScreen() {
         </div>
       ) : (
         <div className="space-y-4">
-           {filteredPlayers.map((player, i) => (
-              <Motion.div 
+           {filteredPlayers.map((player) => (
+              <div 
                 key={player.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.03 }}
                 className="bg-slate-800/10 border border-slate-700/20 rounded-2xl p-4 flex items-center justify-between group hover:bg-slate-800/30 transition-all"
               >
                  <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-[#e0f146] font-black italic shadow-inner group-hover:border-[#e0f146]/30 transition-all">
-                       {player.displayName.substring(0, 2).toUpperCase()}
+                       {(player.displayName || '?').substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                       <h3 className="text-sm font-black italic tracking-wide uppercase text-white">{player.displayName}</h3>
+                       <h3 className="text-sm font-black italic tracking-wide uppercase text-white">{player.displayName || 'Unknown Player'}</h3>
                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <Shield size={10} className="text-indigo-500" />
                           <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
@@ -151,7 +156,7 @@ export default function PlayersScreen() {
                     </div>
                  </div>
                  <ChevronRight size={18} className="text-slate-700 group-hover:text-[#e0f146] transition-colors" />
-              </Motion.div>
+              </div>
            ))}
         </div>
       )}

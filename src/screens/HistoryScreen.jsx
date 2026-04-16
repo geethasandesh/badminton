@@ -57,13 +57,13 @@ export default function HistoryScreen() {
     <div className="flex flex-col min-h-screen bg-[#0b1120] px-6 pt-6 pb-32 max-w-[440px] mx-auto w-full">
       
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
            <button 
              onClick={() => navigate('/')}
-             className="p-3 rounded-2xl bg-slate-800 border border-slate-700 text-slate-400"
+             className="p-2 rounded-2xl bg-slate-800 border border-slate-700 text-slate-400"
            >
-             <ChevronLeft size={20} />
+             <ChevronLeft size={18} />
            </button>
            <h1 className="text-3xl font-black italic tracking-wider uppercase text-white">History</h1>
         </div>
@@ -71,10 +71,10 @@ export default function HistoryScreen() {
           type="button"
           onClick={downloadCsv}
           disabled={loading || history.length === 0}
-          className="w-10 h-10 rounded-full bg-[#e0f146]/10 border border-[#e0f146]/20 flex items-center justify-center disabled:opacity-30 text-[#e0f146]"
+          className="w-9 h-9 rounded-full bg-[#e0f146]/10 border border-[#e0f146]/20 flex items-center justify-center disabled:opacity-30 text-[#e0f146]"
           title="Export CSV"
         >
-           <Download size={20} />
+           <Download size={16} />
         </button>
       </div>
 
@@ -88,7 +88,7 @@ export default function HistoryScreen() {
            <p className="font-bold text-slate-400 uppercase tracking-widest text-xs">No finished matches found</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <AnimatePresence>
             {history.map((match, i) => (
               <Motion.div 
@@ -96,12 +96,9 @@ export default function HistoryScreen() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-6 relative overflow-hidden group"
+                className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-4 relative overflow-hidden group"
               >
-                {/* Background Accent */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#e0f146]/5 rounded-bl-[100px] -mr-16 -mt-16 group-hover:bg-[#e0f146]/10 transition-all duration-500"></div>
-                
-                <div className="flex justify-between items-center mb-6 text-[10px] font-black italic tracking-widest text-slate-500 uppercase">
+                <div className="flex justify-between items-center mb-3 text-[10px] font-black italic tracking-widest text-slate-500 uppercase">
                    <div className="flex items-center gap-2">
                       <Calendar size={12} />
                       {match.lastUpdated?.toDate ? match.lastUpdated.toDate().toLocaleDateString() : 'Recent'}
@@ -112,17 +109,17 @@ export default function HistoryScreen() {
                    </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-2">
                    <div className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black ${match.winner === match.team1.name ? 'bg-[#e0f146] text-black shadow-[0_0_15px_rgba(224,241,70,0.4)]' : 'bg-slate-800 text-slate-500'}`}>
                             {match.team1.name.substring(0, 2).toUpperCase()}
                          </div>
-                         <span className={`text-lg font-black italic uppercase tracking-wide ${match.winner === match.team1.name ? 'text-white' : 'text-slate-500'}`}>
+                         <span className={`text-sm font-black italic uppercase tracking-wide ${match.winner === match.team1.name ? 'text-white' : 'text-slate-500'}`}>
                             {match.team1.name}
                          </span>
                       </div>
-                      <span className={`text-2xl font-black ${match.winner === match.team1.name ? 'text-[#e0f146]' : 'text-slate-600'}`}>
+                      <span className={`text-lg font-black ${match.winner === match.team1.name ? 'text-[#e0f146]' : 'text-slate-600'}`}>
                          {match.team1.sets}
                       </span>
                    </div>
@@ -132,18 +129,18 @@ export default function HistoryScreen() {
                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black ${match.winner === match.team2.name ? 'bg-[#e0f146] text-black shadow-[0_0_15px_rgba(224,241,70,0.4)]' : 'bg-slate-800 text-slate-500'}`}>
                             {match.team2.name.substring(0, 2).toUpperCase()}
                          </div>
-                         <span className={`text-lg font-black italic uppercase tracking-wide ${match.winner === match.team2.name ? 'text-white' : 'text-slate-500'}`}>
+                         <span className={`text-sm font-black italic uppercase tracking-wide ${match.winner === match.team2.name ? 'text-white' : 'text-slate-500'}`}>
                             {match.team2.name}
                          </span>
                       </div>
-                      <span className={`text-2xl font-black ${match.winner === match.team2.name ? 'text-[#e0f146]' : 'text-slate-600'}`}>
+                      <span className={`text-lg font-black ${match.winner === match.team2.name ? 'text-[#e0f146]' : 'text-slate-600'}`}>
                          {match.team2.sets}
                       </span>
                    </div>
                 </div>
 
                 {match.winner && (
-                   <div className="mt-6 pt-4 border-t border-slate-700/50 flex items-center justify-center gap-2">
+                   <div className="mt-3 pt-3 border-t border-slate-700/50 flex items-center justify-center gap-2">
                       <span className="text-[9px] font-black italic text-slate-500 uppercase tracking-[0.2em]">Winner:</span>
                       <span className="text-[10px] font-black italic text-[#e0f146] uppercase tracking-[0.1em]">{match.winner}</span>
                    </div>

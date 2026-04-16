@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMatchStore } from '../store/useMatchStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { db } from '../config/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
-import { History, Trophy, Users, User as UserIcon, Search, X, Check, Info } from 'lucide-react';
+import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { History, Trophy, Users, User as UserIcon, X, Check, Info } from 'lucide-react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 
 const FORMAT_PRESETS = [
@@ -15,7 +15,7 @@ const FORMAT_PRESETS = [
 
 export default function SetupScreen() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
   const { startMatch } = useMatchStore();
   
   const [matchType, setMatchType] = useState('singles'); 
@@ -31,41 +31,55 @@ export default function SetupScreen() {
   // Search state
   const [searchIndex, setSearchIndex] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   useEffect(() => {
-    if (searchIndex !== null && searchQuery.length >= 2) {
-      const delayDebounceFn = setTimeout(async () => {
-        setSearching(true);
-        try {
-          const q = query(
-            collection(db, 'users'),
-            where('displayName', '>=', searchQuery),
-            where('displayName', '<=', searchQuery + '\uf8ff'),
-            limit(5)
-          );
-          const snapshot = await getDocs(q);
-          const results = snapshot.docs.map(doc => doc.data());
-          setSearchResults(results);
-        } catch (error) {
-          console.error("Error searching users:", error);
-        } finally {
-          setSearching(false);
-        }
-      }, 300);
+    let cancelled = false;
 
-      return () => clearTimeout(delayDebounceFn);
-    } else {
-      setSearchResults([]);
-    }
-  }, [searchQuery, searchIndex]);
+    const loadUsers = async () => {
+      setUsersLoading(true);
+      try {
+        const usersQuery = query(collection(db, 'users'), limit(200));
+        const snapshot = await getDocs(usersQuery);
+        if (cancelled) return;
+        const usersPool = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return { id: doc.id, ...data, uid: data.uid || doc.id };
+        });
+        setAllUsers(usersPool);
+      } catch (error) {
+        console.error("Error loading users:", error);
+      } finally {
+        if (!cancelled) setUsersLoading(false);
+      }
+    };
+
+    loadUsers();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const searchResults = useMemo(() => {
+    if (searchIndex === null) return [];
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) return allUsers.slice(0, 8);
+
+    return allUsers
+      .filter((u) => {
+        const name = (u.displayName || '').toLowerCase();
+        const email = (u.email || '').toLowerCase();
+        return name.includes(normalizedQuery) || email.includes(normalizedQuery);
+      })
+      .slice(0, 8);
+  }, [allUsers, searchQuery, searchIndex]);
 
   const selectPlayer = (index, pUser) => {
     const newPlayers = [...players];
     const newUids = [...playerUids];
-    newPlayers[index] = pUser.displayName;
-    newUids[index] = pUser.uid;
+    newPlayers[index] = pUser.displayName || pUser.email || 'Player';
+    newUids[index] = pUser.uid || pUser.id || null;
     setPlayers(newPlayers);
     setPlayerUids(newUids);
     setSearchIndex(null);
@@ -79,6 +93,9 @@ export default function SetupScreen() {
     newUids[index] = null;
     setPlayers(newPlayers);
     setPlayerUids(newUids);
+    if (searchIndex === index) {
+      setSearchQuery('');
+    }
   };
 
   const applyPreset = (presetId) => {
@@ -123,7 +140,10 @@ export default function SetupScreen() {
                 setSearchIndex(index);
                 setSearchQuery(e.target.value);
               }}
-              onFocus={() => setSearchIndex(index)}
+              onFocus={() => {
+                setSearchIndex(index);
+                setSearchQuery(players[index] || '');
+              }}
            />
            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
              {players[index] ? (
@@ -135,7 +155,12 @@ export default function SetupScreen() {
                </button>
              ) : (
                <button 
-                 onClick={() => selectPlayer(index, { displayName: user?.displayName || 'Me', uid: user?.uid })}
+                 onClick={() =>
+                   selectPlayer(index, {
+                     displayName: profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Me',
+                     uid: user?.uid,
+                   })
+                 }
                  className="text-[10px] font-black italic text-[#e0f146] bg-[#e0f146]/10 px-2 py-1 rounded-lg border border-[#e0f146]/20 hover:bg-[#e0f146]/20 transition-all uppercase"
                >
                  Me
@@ -150,12 +175,12 @@ export default function SetupScreen() {
       
       {/* Search Dropdown Overlay */}
       <AnimatePresence>
-        {searchIndex === index && searchQuery.length >= 2 && (
+        {searchIndex === index && (
           <Motion.div 
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
             className="absolute left-0 right-12 top-full mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden"
           >
-            {searching ? (
+            {usersLoading ? (
                <div className="p-4 text-center text-xs text-slate-500 font-bold uppercase tracking-widest animate-pulse">Searching Registration...</div>
             ) : searchResults.length > 0 ? (
                searchResults.map((u) => (
@@ -165,16 +190,18 @@ export default function SetupScreen() {
                     className="w-full p-4 flex items-center gap-3 hover:bg-slate-700 text-left border-b border-slate-700/50 last:border-0"
                   >
                      <div className="w-8 h-8 rounded-full bg-[#e0f146] text-black flex items-center justify-center font-bold text-xs uppercase">
-                        {u.displayName.substring(0, 2)}
+                        {(u.displayName || u.email || 'U').substring(0, 2)}
                      </div>
                      <div>
-                        <p className="text-white font-bold text-sm">{u.displayName}</p>
+                        <p className="text-white font-bold text-sm">{u.displayName || u.email || 'Unknown Player'}</p>
                         <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Registered User</p>
                      </div>
                   </button>
                ))
             ) : (
-               <div className="p-4 text-center text-xs text-slate-500 font-bold uppercase tracking-widest italic">No player found. Creating new.</div>
+               <div className="p-4 text-center text-xs text-slate-500 font-bold uppercase tracking-widest italic">
+                 {searchQuery.trim() ? 'No player found. Creating new.' : 'No registered players found.'}
+               </div>
             )}
           </Motion.div>
         )}
@@ -200,15 +227,15 @@ export default function SetupScreen() {
         </button>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-5">
         
         {/* Match Type */}
-        <div className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-6">
+        <div className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-4">
            <label className="block text-[10px] font-black italic tracking-[0.2em] text-slate-500 uppercase mb-4">Select Format</label>
-           <div className="flex bg-[#0b1120] rounded-2xl p-1.5 border border-slate-700/50">
+          <div className="flex bg-[#0b1120] rounded-2xl p-1 border border-slate-700/50">
              <button 
                onClick={() => setMatchType('singles')}
-               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic tracking-widest uppercase transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl font-black italic tracking-widest uppercase transition-all ${
                  matchType === 'singles' ? 'bg-[#e0f146] text-slate-900 shadow-xl' : 'text-slate-500 hover:text-white'
                }`}
              >
@@ -216,7 +243,7 @@ export default function SetupScreen() {
              </button>
              <button 
                onClick={() => setMatchType('doubles')}
-               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black italic tracking-widest uppercase transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl font-black italic tracking-widest uppercase transition-all ${
                  matchType === 'doubles' ? 'bg-[#e0f146] text-slate-900 shadow-xl' : 'text-slate-500 hover:text-white'
                }`}
              >
@@ -226,14 +253,14 @@ export default function SetupScreen() {
         </div>
 
         {/* Player Selection */}
-        <div className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-6">
+        <div className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-4">
            <label className="block text-[10px] font-black italic tracking-[0.2em] text-slate-500 uppercase mb-4">Registration Search</label>
            <div className="space-y-4">
               <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl mb-4 text-[10px] font-bold text-indigo-400 uppercase tracking-widest leading-relaxed">
                  Type a name to search existing registered players in the database.
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-4">
                  <div>
                     <span className="block text-[9px] font-black italic text-slate-600 uppercase mb-2 ml-1">Home Team</span>
                     <div className="space-y-3">
@@ -259,7 +286,7 @@ export default function SetupScreen() {
         </div>
 
         {/* Format presets (BWF-style) */}
-        <div className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-6 mb-4">
+        <div className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-4 mb-3">
            <label className="block text-[10px] font-black italic tracking-[0.2em] text-slate-500 uppercase mb-4">Rally format</label>
            <div className="grid grid-cols-3 gap-2 mb-4">
               {FORMAT_PRESETS.map((p) => (
@@ -287,7 +314,7 @@ export default function SetupScreen() {
         </div>
 
         {/* scoring Format */}
-        <div className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-6 mb-4">
+        <div className="bg-slate-800/20 border border-slate-700/30 rounded-3xl p-4 mb-3">
            <label className="block text-[10px] font-black italic tracking-[0.2em] text-slate-500 uppercase mb-4">Match Config</label>
            <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -321,13 +348,13 @@ export default function SetupScreen() {
 
       </div>
 
-      <div className="mt-8">
+      <div className="mt-4">
         <button 
           onClick={handleStart} 
-          className="w-full py-5 bg-gradient-to-r from-[#e0f146] to-lime-500 rounded-3xl text-slate-900 font-black italic tracking-widest text-xl uppercase shadow-2xl shadow-lime-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+          className="w-full py-3 bg-gradient-to-r from-[#e0f146] to-lime-500 rounded-2xl text-slate-900 font-black italic tracking-widest text-lg uppercase shadow-lg shadow-lime-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
         >
           <span>Start Match</span>
-          <Trophy size={24} />
+          <Trophy size={18} />
         </button>
       </div>
 

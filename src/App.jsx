@@ -49,7 +49,7 @@ function AppRoutes() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b1120] flex flex-col relative font-sans selection:bg-[#e0f146]/30 selection:text-[#e0f146]">
+    <div className="app-shell min-h-screen bg-[#0b1120] flex flex-col relative selection:bg-[#e0f146]/30 selection:text-[#e0f146]">
       <div className="flex-1 flex flex-col">
         <Routes>
           {/* Public Auth Gateway */}

@@ -1,30 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { db } from '../config/firebase';
-import { collection, onSnapshot, orderBy, limit, addDoc, getDocs, query, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, limit, query } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { useMatchStore } from '../store/useMatchStore';
 import { 
   Trophy, 
-  Activity, 
   PlusCircle, 
   History as HistoryIcon, 
   User, 
   ChevronRight, 
   CircleDot,
   ArrowUpRight,
-  MonitorPlay
+  LogOut
 } from 'lucide-react';
 
 const HomeScreen = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, profile, logout } = useAuthStore();
+  const displayName =
+    profile?.displayName ||
+    user?.displayName ||
+    user?.email?.split('@')[0] ||
+    'User';
   
   const [liveMatches, setLiveMatches] = useState([]);
   const [recentMatches, setRecentMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     const q = query(
@@ -48,81 +51,10 @@ const HomeScreen = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleSeedData = async () => {
-    if (!user) {
-      alert("Please sign in first to seed data.");
-      return;
-    }
-    setSeeding(true);
-    try {
-      // 1. Seed Players
-      const players = [
-        { uid: 'seed-1', displayName: 'Viktor Axelsen', email: 'viktor@bwf.com' },
-        { uid: 'seed-2', displayName: 'Loh Kean Yew', email: 'loh@bwf.com' },
-        { uid: 'seed-3', displayName: 'Kento Momota', email: 'kento@bwf.com' },
-        { uid: 'seed-4', displayName: 'Lee Zii Jia', email: 'lee@bwf.com' },
-        { uid: 'seed-5', displayName: 'Anders Antonsen', email: 'anders@bwf.com' },
-        { uid: 'seed-6', displayName: 'An Se-young', email: 'an@bwf.com' },
-        { uid: 'seed-7', displayName: 'Akane Yamaguchi', email: 'akane@bwf.com' },
-        { uid: 'seed-8', displayName: 'Tai Tzu-ying', email: 'tai@bwf.com' },
-      ];
-
-      const usersCol = collection(db, 'users');
-      const playerSnap = await getDocs(query(usersCol, limit(1)));
-      if (playerSnap.empty) {
-        for (const p of players) await addDoc(usersCol, p);
-      }
-
-      // 2. Seed Matches
-      const matchesCol = collection(db, 'matches');
-      
-      const fakeMatches = [
-        {
-          matchType: 'singles', status: 'finished', currentSet: 2, umpireId: 'seed-admin',
-          team1: { name: 'Viktor Axelsen', score: 21, sets: 2, players: ['Viktor Axelsen'] },
-          team2: { name: 'Kento Momota', score: 18, sets: 0, players: ['Kento Momota'] },
-          winner: 'Viktor Axelsen', lastUpdated: serverTimestamp(), pointsToWin: 21, setsToWin: 2
-        },
-        {
-          matchType: 'singles', status: 'finished', currentSet: 3, umpireId: 'seed-admin',
-          team1: { name: 'Loh Kean Yew', score: 21, sets: 2, players: ['Loh Kean Yew'] },
-          team2: { name: 'Lee Zii Jia', score: 23, sets: 1, players: ['Lee Zii Jia'] },
-          winner: 'Loh Kean Yew', lastUpdated: serverTimestamp(), pointsToWin: 21, setsToWin: 2
-        },
-        {
-          matchType: 'doubles', status: 'finished', currentSet: 2, umpireId: 'seed-admin',
-          team1: { name: 'Alfian/Ardianto', score: 21, sets: 2, players: ['Alfian', 'Ardianto'] },
-          team2: { name: 'Chia/Soh', score: 19, sets: 0, players: ['Chia', 'Soh'] },
-          winner: 'Alfian/Ardianto', lastUpdated: serverTimestamp(), pointsToWin: 21, setsToWin: 2
-        },
-        {
-          matchType: 'singles', status: 'finished', currentSet: 2, umpireId: 'seed-admin',
-          team1: { name: 'An Se-young', score: 21, sets: 2, players: ['An Se-young'] },
-          team2: { name: 'Akane Yamaguchi', score: 15, sets: 0, players: ['Akane Yamaguchi'] },
-          winner: 'An Se-young', lastUpdated: serverTimestamp(), pointsToWin: 21, setsToWin: 2
-        },
-        {
-          matchType: 'singles', status: 'finished', currentSet: 3, umpireId: 'seed-admin',
-          team1: { name: 'Tai Tzu-ying', score: 19, sets: 1, players: ['Tai Tzu-ying'] },
-          team2: { name: 'Chen Yufei', score: 21, sets: 2, players: ['Chen Yufei'] },
-          winner: 'Chen Yufei', lastUpdated: serverTimestamp(), pointsToWin: 21, setsToWin: 2
-        },
-        {
-          matchType: 'singles', status: 'live', currentSet: 1, umpireId: user.uid,
-          team1: { name: 'Lakshya Sen', score: 14, sets: 0, players: ['Lakshya Sen'] },
-          team2: { name: 'Jonatan Christie', score: 12, sets: 0, players: ['Jonatan Christie'] },
-          servingTeam: 1, lastUpdated: serverTimestamp(), pointsToWin: 21, setsToWin: 2,
-          team1Positions: [1, 0], team2Positions: [1, 0], history: []
-        }
-      ];
-
-      for (const m of fakeMatches) await addDoc(matchesCol, m);
-      alert("Success! Expanded history and live matches have been added to Firebase.");
-    } catch (error) {
-       console.error("Seeding error:", error);
-       alert("Error seeding data. Check console.");
-    } finally {
-       setSeeding(false);
+  const handleLogout = async () => {
+    const loggedOut = await logout();
+    if (loggedOut) {
+      navigate('/auth', { replace: true });
     }
   };
 
@@ -145,14 +77,24 @@ const HomeScreen = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Welcome back,</p>
-           <h1 className="text-2xl font-black italic tracking-wide uppercase">{user?.displayName || 'Badminton Fan'}</h1>
+           <h1 className="text-2xl font-black italic tracking-wide uppercase">{displayName}</h1>
         </div>
-        <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center shadow-lg">
-           <User size={24} className="text-[#e0f146]" />
+        <div className="flex items-center gap-2">
+          <div className="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center shadow-lg">
+             <User size={24} className="text-[#e0f146]" />
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="h-12 px-3 rounded-2xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-wider"
+          >
+            <LogOut size={14} />
+            Logout
+          </button>
         </div>
       </div>
 
-      <div className="mb-10">
+      <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
            <h2 className="text-xs font-black italic tracking-widest uppercase flex items-center gap-2">
               <CircleDot size={14} className="text-rose-500 animate-pulse" />
@@ -166,8 +108,8 @@ const HomeScreen = () => {
         </div>
 
         {liveMatches.length === 0 ? (
-          <div className="py-10 bg-slate-800/10 border border-slate-700/30 rounded-3xl flex flex-col items-center justify-center text-slate-500">
-             <MonitorPlay size={32} className="mb-2 opacity-20" />
+          <div className="py-6 bg-slate-800/10 border border-slate-700/30 rounded-3xl flex flex-col items-center justify-center text-slate-500">
+             <Trophy size={24} className="mb-2 opacity-30" />
              <p className="text-[10px] font-bold uppercase tracking-widest">No matches currently live</p>
           </div>
         ) : (
@@ -177,9 +119,9 @@ const HomeScreen = () => {
                 key={match.id}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onMatchClick(match)}
-                className="flex-shrink-0 w-64 bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 text-left relative overflow-hidden"
+                className="flex-shrink-0 w-56 bg-slate-800/40 border border-slate-700/50 rounded-2xl p-3 text-left relative overflow-hidden"
               >
-                 <div className="flex justify-between items-start mb-4">
+                 <div className="flex justify-between items-start mb-2">
                     <span className="text-[8px] font-black text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded uppercase tracking-widest">
                        {match.status === 'live' ? 'Live' : 'Paused'}
                     </span>
@@ -206,37 +148,22 @@ const HomeScreen = () => {
         )}
       </div>
 
-      <div className="mb-10">
+      <div className="mb-8">
          <Motion.button 
            whileTap={{ scale: 0.97 }}
            onClick={() => navigate('/setup')}
-           className="w-full py-10 bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-[#e0f146]/20 rounded-[2.5rem] flex flex-col items-center justify-center shadow-2xl relative overflow-hidden group"
+           className="w-full py-4 px-4 bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-[#e0f146]/20 rounded-2xl flex items-center justify-between shadow-lg relative overflow-hidden group"
          >
             <div className="absolute inset-0 bg-[#e0f146]/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="w-16 h-16 bg-[#e0f146] rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(224,241,70,0.3)]">
-               <PlusCircle size={32} className="text-slate-900" />
+            <div className="w-10 h-10 bg-[#e0f146] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(224,241,70,0.25)] shrink-0">
+               <PlusCircle size={20} className="text-slate-900" />
             </div>
-            <span className="text-2xl font-black italic tracking-[0.05em] uppercase text-white">Start New Match</span>
-            <span className="mt-2 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Create a tournament match</span>
+            <div className="text-left flex-1 ml-3">
+              <span className="text-base font-black uppercase text-white block">Start New Match</span>
+              <span className="text-[9px] font-bold text-slate-500 uppercase">Create match quickly</span>
+            </div>
+            <ChevronRight size={16} className="text-[#e0f146] shrink-0" />
          </Motion.button>
-      </div>
-
-      {/* SYSTEM TOOLS: SEED DATA (Moved up for visibility) */}
-      <div className="mb-10 p-6 bg-slate-800/20 border border-dashed border-slate-700/50 rounded-3xl">
-         <div className="flex items-center gap-2 mb-4">
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-            <p className="text-[10px] font-black italic text-slate-500 uppercase tracking-[0.2em]">System Developer Tools</p>
-         </div>
-         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">
-            First time? Populate your database with 8 pro players and demo matches.
-         </p>
-         <button 
-           onClick={handleSeedData}
-           disabled={seeding}
-           className="w-full py-4 bg-[#e0f146]/10 border border-[#e0f146]/20 rounded-2xl text-[10px] font-black italic tracking-widest uppercase text-[#e0f146] hover:bg-[#e0f146]/20 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#e0f146]/5"
-         >
-            {seeding ? "POPULATING CLOUD..." : <>🚀 COMPREHENSIVE SEED <MonitorPlay size={14} /></>}
-         </button>
       </div>
 
       <div>

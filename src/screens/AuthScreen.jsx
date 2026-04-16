@@ -23,7 +23,7 @@ const AuthScreen = () => {
     <Motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex-1 flex flex-col items-center justify-center -mt-8"
+      className="flex-1 min-h-screen w-full flex items-center justify-center px-5"
     >
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
